@@ -274,14 +274,14 @@
         }
         
         .wheel-btn {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             background: linear-gradient(180deg, #5a4a35 0%, #3d2f1f 100%);
             border: 2px solid #6b5a45;
             border-radius: 4px;
             color: #daa520;
             font-family: 'Cinzel', serif;
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -290,6 +290,8 @@
             padding: 0;
             line-height: 1;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
         
         .wheel-btn:active {
@@ -427,6 +429,23 @@
                 wheel.addEventListener('mousedown', onWheelMouseDown);
                 wheel.addEventListener('touchstart', onWheelTouchStart, { passive: false });
                 wheel.addEventListener('click', e => e.stopPropagation());
+                
+                let touchStartY = 0;
+                wheel.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                }, { passive: true });
+                
+                wheel.addEventListener('touchend', (e) => {
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const diff = touchStartY - touchEndY;
+                    if (Math.abs(diff) > 10) {
+                        if (diff > 0) {
+                            incrementDigit(i);
+                        } else {
+                            decrementDigit(i);
+                        }
+                    }
+                }, { passive: true });
             }
         }
         
