@@ -407,23 +407,31 @@
                 
                 wheel.addEventListener('mousedown', onWheelMouseDown);
                 wheel.addEventListener('touchstart', onWheelTouchStart, { passive: false });
+                wheel.addEventListener('click', e => e.stopPropagation());
             }
         }
         
         function onWheelMouseDown(e) {
             e.preventDefault();
+            e.stopPropagation();
             const wheel = e.currentTarget;
-            startDrag(wheel, e.clientX, e.clientY);
+            startDrag(wheel, e.clientX, e.clientY, 'mouse');
         }
         
         function onWheelTouchStart(e) {
             e.preventDefault();
+            e.stopPropagation();
             const wheel = e.currentTarget;
-            const touch = e.touches[0];
-            startDrag(wheel, touch.clientX, touch.clientY);
+            if (e.touches.length > 0) {
+                startDrag(wheel, e.touches[0].clientX, e.touches[0].clientY, 'touch');
+            }
         }
         
-        function startDrag(wheel, clientX, clientY) {
+        let dragType = null;
+        let currentDragAngle = 0;
+        
+        function startDrag(wheel, clientX, clientY, type) {
+            dragType = type;
             const index = parseInt(wheel.dataset.index);
             const rect = wheel.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
@@ -435,34 +443,39 @@
                 centerX,
                 centerY,
                 startAngle: Math.atan2(clientY - centerY, clientX - centerX),
-                currentAngle: parseFloat(wheel.dataset.angle) || 0
+                currentAngle: parseFloat(wheel.dataset.angle) || 0,
+                currentValue: accumulator[index]
             };
             
             wheel.classList.add('dragging');
             
-            document.addEventListener('mousemove', onDragMove);
-            document.addEventListener('mouseup', e => onDragEnd(e));
-            document.addEventListener('touchmove', onTouchMove, { passive: false });
-            document.addEventListener('touchend', e => onDragEnd(e));
+            if (type === 'mouse') {
+                document.addEventListener('mousemove', onDragMove);
+                document.addEventListener('mouseup', onDragEnd);
+            } else {
+                document.addEventListener('touchmove', onTouchMove, { passive: false });
+                document.addEventListener('touchend', onDragEnd);
+            }
         }
         
         function onDragMove(e) {
-            if (!dragState) return;
-            const clientX = e.clientX;
-            const clientY = e.clientY;
-            updateDrag(clientX, clientY);
+            if (!dragState || dragType !== 'mouse') return;
+            currentDragAngle = Math.atan2(e.clientY - dragState.centerY, e.clientX - dragState.centerX);
+            updateDrag(e.clientX, e.clientY);
         }
         
         function onTouchMove(e) {
-            if (!dragState) return;
+            if (!dragState || dragType !== 'touch') return;
             e.preventDefault();
-            const touch = e.touches[0];
-            updateDrag(touch.clientX, touch.clientY);
+            if (e.touches.length > 0) {
+                currentDragAngle = Math.atan2(e.touches[0].clientY - dragState.centerY, e.touches[0].clientX - dragState.centerX);
+                updateDrag(e.touches[0].clientX, e.touches[0].clientY);
+            }
         }
         
         function updateDrag(clientX, clientY) {
-            const angle = Math.atan2(clientY - dragState.centerY, clientX - dragState.centerX);
-            const delta = angle - dragState.startAngle;
+            currentDragAngle = Math.atan2(clientY - dragState.centerY, clientX - dragState.centerX);
+            const delta = currentDragAngle - dragState.startAngle;
             let newAngle = dragState.currentAngle + delta * (180 / Math.PI);
             
             newAngle = newAngle % 360;
@@ -470,6 +483,11 @@
             
             let newValue = Math.round(newAngle / STEP_ANGLE) % 10;
             
+            if (newValue === 0 && dragState.currentValue === 9) {
+                doCarry(dragState.index);
+            }
+            
+            dragState.currentValue = newValue;
             accumulator[dragState.index] = newValue;
             
             const inner = document.getElementById('wheel-inner-' + dragState.index);
@@ -485,19 +503,21 @@
 updateDigits();
         }
         
-        function onDragEnd(e) {
+        function onDragEnd() {
             if (!dragState) return;
             
             dragState.wheel.classList.remove('dragging');
-            dragState.wheel.dataset.angle = (parseFloat(dragState.wheel.dataset.angle) || 0) + 
-                (Math.atan2(e.clientY - dragState.centerY, e.clientX - dragState.centerX) - dragState.startAngle) * (180 / Math.PI);
             
-            document.removeEventListener('mousemove', onDragMove);
-            document.removeEventListener('mouseup', e => onDragEnd(e));
-            document.removeEventListener('touchmove', onTouchMove);
-            document.removeEventListener('touchend', e => onDragEnd(e));
+            if (dragType === 'mouse') {
+                document.removeEventListener('mousemove', onDragMove);
+                document.removeEventListener('mouseup', onDragEnd);
+            } else {
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', onDragEnd);
+            }
             
             dragState = null;
+            dragType = null;
         }
         
         function updateDigits() {
@@ -524,6 +544,31 @@ updateDigits();
             if (dot) {
                 dot.classList.add('active');
                 setTimeout(() => dot.classList.remove('active'), 400);
+            }
+        }
+        
+        function doCarry(index) {
+            if (index >= NUM_DIGITS) return;
+            
+            showCarry(index);
+            
+            if (index + 1 < NUM_DIGITS) {
+                accumulator[index + 1]++;
+                if (accumulator[index + 1] > 9) {
+                    accumulator[index + 1] = 0;
+                    doCarry(index + 1);
+                }
+            }
+            
+            updateDigits();
+            
+            const nextWheel = document.querySelector(`.wheel[data-index="${index + 1}"]`);
+            if (nextWheel) {
+                const nextAngle = accumulator[index + 1] * STEP_ANGLE;
+                const nextInner = document.getElementById('wheel-inner-' + (index + 1));
+                if (nextInner) {
+                    nextInner.style.transform = `rotate(${nextAngle}deg)`;
+                }
             }
         }
         
