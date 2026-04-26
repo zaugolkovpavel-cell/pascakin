@@ -266,52 +266,52 @@
             background: linear-gradient(180deg, #9b8a75, #5d4d3f);
         }
         
-        .wheel-spoke.tick::after {
+.wheel-spoke.tick::after {
             width: 11px;
             height: 11px;
             left: -4px;
             background: #7b6a55;
         }
         
-        .controls {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-        
-        .control-btn {
+        .wheel-btn {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(180deg, #5a4a35 0%, #3d2f1f 100%);
+            border: 2px solid #6b5a45;
+            border-radius: 4px;
+            color: #daa520;
             font-family: 'Cinzel', serif;
-            background: linear-gradient(180deg, #b8860b 0%, #8b6508 100%);
-            border: 2px solid #daa520;
-            padding: 8px 16px;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             font-weight: bold;
             cursor: pointer;
-            border-radius: 6px;
-            color: #1a120a;
-            box-shadow: 
-                0 3px 10px rgba(0,0,0,0.4),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+            touch-action: manipulation;
         }
         
-        .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 
-                0 5px 15px rgba(0,0,0,0.4),
-                0 0 20px rgba(218,165,32,0.3);
+        .wheel-btn:active {
+            background: linear-gradient(180deg, #6b5a45 0%, #4d3d2f 100%);
         }
         
-        .control-btn.minus {
-            background: linear-gradient(180deg, #8b4513 0%, #5a2d0a 100%);
-            border-color: #cd853f;
+        .wheel-btn-row {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
         }
         
-        .control-btn.secondary {
-            background: linear-gradient(180deg, #5a4a35 0%, #3d2f1f 100%);
-            color: #daa520;
-            border-color: #6b5a45;
+        @media (hover: none) and (pointer: coarse) {
+            .wheel-btn {
+                display: flex;
+            }
+        }
+        
+        @media (hover: hover) and (pointer: fine) {
+            .wheel-btn {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -405,9 +405,108 @@
                 slot.appendChild(wheel);
                 container.appendChild(slot);
                 
+                const btnRow = document.createElement('div');
+                btnRow.className = 'wheel-btn-row';
+                
+                const btnMinus = document.createElement('button');
+                btnMinus.className = 'wheel-btn';
+                btnMinus.textContent = '−';
+                btnMinus.dataset.index = i;
+                btnMinus.onclick = (e) => { e.stopPropagation(); decrementDigit(i); };
+                btnRow.appendChild(btnMinus);
+                
+                const btnPlus = document.createElement('button');
+                btnPlus.className = 'wheel-btn';
+                btnPlus.textContent = '+';
+                btnPlus.dataset.index = i;
+                btnPlus.onclick = (e) => { e.stopPropagation(); incrementDigit(i); };
+                btnRow.appendChild(btnPlus);
+                
+                slot.appendChild(btnRow);
+                
                 wheel.addEventListener('mousedown', onWheelMouseDown);
                 wheel.addEventListener('touchstart', onWheelTouchStart, { passive: false });
                 wheel.addEventListener('click', e => e.stopPropagation());
+            }
+        }
+        
+        function incrementDigit(index) {
+            const oldValue = accumulator[index];
+            let newValue = oldValue + 1;
+            
+            if (newValue > 9) {
+                newValue = 0;
+                doCarry(index);
+            } else {
+                accumulator[index] = newValue;
+            }
+            
+            const wheel = document.querySelector(`.wheel[data-index="${index}"]`);
+            if (wheel) {
+                const angle = accumulator[index] * STEP_ANGLE;
+                const inner = document.getElementById('wheel-inner-' + index);
+                if (inner) {
+                    inner.style.transform = `rotate(${angle}deg)`;
+                }
+            }
+            
+            updateDigits();
+        }
+        
+        function decrementDigit(index) {
+            let newValue = accumulator[index] - 1;
+            
+            if (newValue < 0) {
+                newValue = 9;
+                doBorrow(index);
+            }
+            
+            accumulator[index] = newValue;
+            
+            const wheel = document.querySelector(`.wheel[data-index="${index}"]`);
+            if (wheel) {
+                const angle = accumulator[index] * STEP_ANGLE;
+                const inner = document.getElementById('wheel-inner-' + index);
+                if (inner) {
+                    inner.style.transform = `rotate(${angle}deg)`;
+                }
+            }
+            
+            updateDigits();
+        }
+        
+        function doBorrow(index) {
+            if (index >= NUM_DIGITS) return;
+            
+            const dot = document.getElementById('carry-' + index);
+            if (dot) {
+                dot.style.background = '#c44';
+                dot.style.boxShadow = '0 0 10px #c44';
+                dot.classList.add('active');
+                setTimeout(() => {
+                    dot.classList.remove('active');
+                    dot.style.background = '#4a9c5d';
+                    dot.style.boxShadow = '0 0 10px #4a9c5d';
+                }, 400);
+            }
+            
+            if (index + 1 < NUM_DIGITS) {
+                accumulator[index + 1]--;
+                if (accumulator[index + 1] < 0) {
+                    accumulator[index + 1] = 9;
+                    doBorrow(index + 1);
+                }
+            }
+            
+            updateDigits();
+            
+            const nextWheel = document.querySelector(`.wheel[data-index="${index + 1}"]`);
+            if (nextWheel) {
+                const nextAngle = accumulator[index + 1] * STEP_ANGLE;
+                const nextInner = document.getElementById('wheel-inner-' + (index + 1));
+                if (nextInner) {
+                    nextInner.style.transform = `rotate(${nextAngle}deg)`;
+                }
             }
         }
         
@@ -485,6 +584,10 @@
             
             if (newValue === 0 && dragState.currentValue === 9) {
                 doCarry(dragState.index);
+            }
+            
+            if (newValue === 9 && dragState.currentValue === 0) {
+                doBorrow(dragState.index);
             }
             
             dragState.currentValue = newValue;
