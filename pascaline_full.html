@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Паскалина — Арифмометр</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: 
+                radial-gradient(ellipse at center, #3d2f1f 0%, #2a1f15 50%, #1a120a 100%);
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            padding: 20px;
+        }
+        
+        .machine {
+            background: linear-gradient(145deg, #4a3525 0%, #2a1f15 100%);
+            border-radius: 12px;
+            padding: 30px 35px;
+            box-shadow: 
+                0 25px 60px rgba(0,0,0,0.7),
+                inset 0 2px 0 rgba(255,255,255,0.1),
+                inset 0 -2px 0 rgba(0,0,0,0.4);
+            border: 4px solid #8b5a2b;
+            position: relative;
+        }
+        
+        .machine::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 14px;
+            background: linear-gradient(45deg, #b8860b, #daa520, #b8860b);
+            z-index: -1;
+            opacity: 0.4;
+        }
+        
+        .title {
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            color: #daa520;
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            letter-spacing: 6px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #8b7355;
+            font-size: 0.75rem;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+            font-style: italic;
+        }
+        
+        .display-section {
+            margin-bottom: 15px;
+        }
+        
+        .register-label {
+            color: #8b7355;
+            font-family: 'Cinzel', serif;
+            font-size: 0.65rem;
+            text-align: center;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+        
+        .display-window {
+            background: linear-gradient(180deg, #0d0a05 0%, #1a1510 100%);
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 3px solid #3d2f1f;
+            box-shadow: 
+                inset 0 8px 20px rgba(0,0,0,0.8),
+                0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .display-window::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #daa520, transparent);
+            opacity: 0.4;
+        }
+        
+        .display-row {
+            display: flex;
+            justify-content: center;
+            flex-direction: row-reverse;
+        }
+        
+        .digit-display {
+            width: 34px;
+            height: 46px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #2a2015;
+            border-radius: 4px;
+            background: #0a0805;
+            box-shadow: inset 0 3px 8px rgba(0,0,0,0.6);
+        }
+        
+        .digit-inner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .digit-inner span {
+            display: block;
+            width: 34px;
+            height: 46px;
+            line-height: 46px;
+            text-align: center;
+            color: #daa520;
+            font-family: 'Cinzel', serif;
+            font-size: 1.6rem;
+            font-weight: bold;
+            text-shadow: 0 0 12px rgba(218,165,32,0.5);
+        }
+        
+        .mechanism {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 15px;
+            background: linear-gradient(180deg, #3d2f1f 0%, #2a1f15 100%);
+            border-radius: 8px;
+            border: 2px solid #4a3525;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+            flex-direction: row-reverse;
+        }
+        
+        .wheel-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+        }
+        
+        .carry-dot {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4a9c5d;
+            opacity: 0;
+            box-shadow: 0 0 10px #4a9c5d;
+            pointer-events: none;
+        }
+        
+        .carry-dot.active {
+            animation: carryPulse 0.4s ease-out;
+        }
+        
+        @keyframes carryPulse {
+            0% { opacity: 1; transform: translateX(-50%) scale(1.5); }
+            100% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+        }
+        
+        .wheel {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: 
+                radial-gradient(circle at 35% 35%, #8b7355 0%, #5a4a35 40%, #3d2f1f 70%, #2a1f15 100%);
+            border: 3px solid #6b5a45;
+            position: relative;
+            cursor: grab;
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.5),
+                inset 0 2px 4px rgba(255,255,255,0.15);
+            transition: border-color 0.2s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        
+        .wheel:hover {
+            border-color: #daa520;
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.5),
+                0 0 20px rgba(218,165,32,0.3),
+                inset 0 2px 4px rgba(255,255,255,0.15);
+        }
+        
+        .wheel.dragging .wheel-inner {
+            cursor: grabbing;
+        }
+        
+        .wheel-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.05s linear;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        
+        .wheel-inner:active {
+            cursor: grabbing;
+        }
+        
+        .wheel-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #daa520;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(218,165,32,0.6);
+            pointer-events: none;
+        }
+        
+        .wheel-spoke {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 3px;
+            height: 16px;
+            background: linear-gradient(180deg, #7b6a55, #4d3d2f);
+            transform-origin: top center;
+            margin-left: -1.5px;
+            margin-top: 0;
+            border-radius: 2px;
+        }
+        
+        .wheel-spoke::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: -3px;
+            width: 9px;
+            height: 9px;
+            background: #6b5a45;
+            border-radius: 50%;
+            box-shadow: inset 0 -1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .wheel-spoke.tick {
+            height: 20px;
+            background: linear-gradient(180deg, #9b8a75, #5d4d3f);
+        }
+        
+        .wheel-spoke.tick::after {
+            width: 11px;
+            height: 11px;
+            left: -4px;
+            background: #7b6a55;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        
+        .control-btn {
+            font-family: 'Cinzel', serif;
+            background: linear-gradient(180deg, #b8860b 0%, #8b6508 100%);
+            border: 2px solid #daa520;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            color: #1a120a;
+            box-shadow: 
+                0 3px 10px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 5px 15px rgba(0,0,0,0.4),
+                0 0 20px rgba(218,165,32,0.3);
+        }
+        
+        .control-btn.minus {
+            background: linear-gradient(180deg, #8b4513 0%, #5a2d0a 100%);
+            border-color: #cd853f;
+        }
+        
+        .control-btn.secondary {
+            background: linear-gradient(180deg, #5a4a35 0%, #3d2f1f 100%);
+            color: #daa520;
+            border-color: #6b5a45;
+        }
+    </style>
+</head>
+<body>
+    <div class="machine">
+        <div class="title">PASCALINE</div>
+        <div class="subtitle">Machine Arithmétique · 1642</div>
+        
+        <div class="display-section">
+            <div class="register-label">АККУМУЛЯТОР</div>
+            <div class="display-window">
+                <div class="display-row" id="display"></div>
+            </div>
+        </div>
+        
+        <div class="mechanism" id="mechanism"></div>
+        
+        <div class="controls">
+            <button class="control-btn secondary" onclick="clearAll()">ОЧИСТИТЬ</button>
+        </div>
+    </div>
+    
+    <script>
+        const NUM_DIGITS = 6;
+        const STEP_ANGLE = 36;
+        let accumulator = [0, 0, 0, 0, 0, 0];
+        
+        let dragState = null;
+        
+        function createDisplay(containerId, array) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            for (let i = 0; i < NUM_DIGITS; i++) {
+                const d = document.createElement('div');
+                d.className = 'digit-display';
+                
+                const inner = document.createElement('div');
+                inner.className = 'digit-inner';
+                inner.id = containerId + '-inner-' + i;
+                
+                for (let j = 0; j <= 9; j++) {
+                    const span = document.createElement('span');
+                    span.textContent = j;
+                    inner.appendChild(span);
+                }
+                
+                d.appendChild(inner);
+                container.appendChild(d);
+            }
+        }
+        
+        function createMechanism() {
+            const container = document.getElementById('mechanism');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < NUM_DIGITS; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'wheel-slot';
+                slot.id = 'wheel-slot-' + i;
+                
+                const carryDot = document.createElement('div');
+                carryDot.className = 'carry-dot';
+                carryDot.id = 'carry-' + i;
+                slot.appendChild(carryDot);
+                
+                const wheel = document.createElement('div');
+                wheel.className = 'wheel';
+                wheel.dataset.index = i;
+                wheel.dataset.angle = 0;
+                
+                const inner = document.createElement('div');
+                inner.className = 'wheel-inner';
+                inner.id = 'wheel-inner-' + i;
+                
+                const value = document.createElement('div');
+                value.className = 'wheel-value';
+                value.id = 'wheel-value-' + i;
+                value.textContent = '0';
+                inner.appendChild(value);
+                
+                for (let s = 0; s < 10; s++) {
+                    const spoke = document.createElement('div');
+                    spoke.className = 'wheel-spoke';
+                    if (s === 0) spoke.classList.add('tick');
+                    spoke.style.transform = `rotate(${s * STEP_ANGLE}deg)`;
+                    inner.appendChild(spoke);
+                }
+                
+                wheel.appendChild(inner);
+                slot.appendChild(wheel);
+                container.appendChild(slot);
+                
+                wheel.addEventListener('mousedown', onWheelMouseDown);
+                wheel.addEventListener('touchstart', onWheelTouchStart, { passive: false });
+            }
+        }
+        
+        function onWheelMouseDown(e) {
+            e.preventDefault();
+            const wheel = e.currentTarget;
+            startDrag(wheel, e.clientX, e.clientY);
+        }
+        
+        function onWheelTouchStart(e) {
+            e.preventDefault();
+            const wheel = e.currentTarget;
+            const touch = e.touches[0];
+            startDrag(wheel, touch.clientX, touch.clientY);
+        }
+        
+        function startDrag(wheel, clientX, clientY) {
+            const index = parseInt(wheel.dataset.index);
+            const rect = wheel.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            dragState = {
+                wheel,
+                index,
+                centerX,
+                centerY,
+                startAngle: Math.atan2(clientY - centerY, clientX - centerX),
+                currentAngle: parseFloat(wheel.dataset.angle) || 0
+            };
+            
+            wheel.classList.add('dragging');
+            
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', e => onDragEnd(e));
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', e => onDragEnd(e));
+        }
+        
+        function onDragMove(e) {
+            if (!dragState) return;
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            updateDrag(clientX, clientY);
+        }
+        
+        function onTouchMove(e) {
+            if (!dragState) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            updateDrag(touch.clientX, touch.clientY);
+        }
+        
+        function updateDrag(clientX, clientY) {
+            const angle = Math.atan2(clientY - dragState.centerY, clientX - dragState.centerX);
+            const delta = angle - dragState.startAngle;
+            let newAngle = dragState.currentAngle + delta * (180 / Math.PI);
+            
+            newAngle = newAngle % 360;
+            if (newAngle < 0) newAngle += 360;
+            
+            let newValue = Math.round(newAngle / STEP_ANGLE) % 10;
+            
+            accumulator[dragState.index] = newValue;
+            
+            const inner = document.getElementById('wheel-inner-' + dragState.index);
+            if (inner) {
+                inner.style.transform = `rotate(${newAngle}deg)`;
+            }
+            
+            const wheelVal = document.getElementById('wheel-value-' + dragState.index);
+            if (wheelVal) {
+                wheelVal.textContent = newValue;
+            }
+            
+updateDigits();
+        }
+        
+        function onDragEnd(e) {
+            if (!dragState) return;
+            
+            dragState.wheel.classList.remove('dragging');
+            dragState.wheel.dataset.angle = (parseFloat(dragState.wheel.dataset.angle) || 0) + 
+                (Math.atan2(e.clientY - dragState.centerY, e.clientX - dragState.centerX) - dragState.startAngle) * (180 / Math.PI);
+            
+            document.removeEventListener('mousemove', onDragMove);
+            document.removeEventListener('mouseup', e => onDragEnd(e));
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', e => onDragEnd(e));
+            
+            dragState = null;
+        }
+        
+        function updateDigits() {
+            for (let i = 0; i < NUM_DIGITS; i++) {
+                const inner = document.getElementById('display-inner-' + i);
+                if (inner) {
+                    const offset = -accumulator[i] * 46;
+                    inner.style.transform = `translateY(${offset}px)`;
+                }
+                
+                const wheelVal = document.getElementById('wheel-value-' + i);
+                if (wheelVal) {
+                    wheelVal.textContent = accumulator[i];
+                }
+            }
+        }
+        
+        function getValueFromArray(arr) {
+            return parseInt(arr.join(''), 10) || 0;
+        }
+        
+        function showCarry(index) {
+            const dot = document.getElementById('carry-' + index);
+            if (dot) {
+                dot.classList.add('active');
+                setTimeout(() => dot.classList.remove('active'), 400);
+            }
+        }
+        
+        function resetWheels() {
+            for (let i = 0; i < NUM_DIGITS; i++) {
+                const wheel = document.querySelector(`.wheel[data-index="${i}"]`);
+                if (wheel) {
+                    wheel.dataset.angle = 0;
+                    const inner = document.getElementById('wheel-inner-' + i);
+                    if (inner) {
+                        inner.style.transform = 'rotate(0deg)';
+                    }
+                }
+            }
+        }
+        
+        function clearAll() {
+            accumulator = [0, 0, 0, 0, 0, 0];
+            resetWheels();
+            updateDigits();
+        }
+        
+        createDisplay('display', accumulator);
+        createMechanism();
+        updateDigits();
+    </script>
+</body>
+</html>
